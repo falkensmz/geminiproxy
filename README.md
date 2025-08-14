@@ -1,79 +1,91 @@
-# Gemini CLI Wrapper & API
+# GeminiProxy 🚀
 
-A Python wrapper and REST API for Google's Gemini CLI tool, designed to manage the free tier limitations (1000 requests/hour) with intelligent rate limiting, caching, and queuing.
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## Features
+A powerful Python wrapper and REST API for Google's Gemini CLI, designed to seamlessly manage free tier limitations with intelligent rate limiting, caching, and enterprise-ready features.
 
-- **Rate Limiting**: Tracks requests per hour with SQLite database
-- **Smart Caching**: Caches responses to avoid duplicate API calls
-- **Retry Logic**: Automatic retries with exponential backoff
-- **Async Processing**: Queue requests for background processing
-- **REST API**: Full HTTP API with Flask server
-- **Batch Processing**: Process multiple prompts efficiently
-- **Usage Statistics**: Track and monitor API usage
+## ✨ Features
 
-## Installation
+- 🔒 **Smart Rate Limiting** - Automatic tracking and management of the 1000 requests/hour limit
+- 💾 **Response Caching** - Reduce redundant API calls with intelligent TTL-based caching
+- 🔄 **Retry Logic** - Automatic retries with exponential backoff for failed requests
+- ⚡ **Async Processing** - Queue requests for non-blocking background processing
+- 🌐 **REST API** - Full-featured HTTP API with Flask and CORS support
+- 📊 **Usage Analytics** - Comprehensive tracking and historical statistics
+- 🎯 **Batch Processing** - Efficiently process multiple prompts with progress tracking
+- 🔧 **CLI Tool** - Feature-rich command-line interface for all operations
+- 🐳 **Docker Support** - Ready-to-deploy containerized solution
+- 📝 **Extensive Logging** - Detailed logging for debugging and monitoring
 
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
+## 🚀 Quick Start
 
-# Make scripts executable
-chmod +x gemini_api.py gemini_server.py examples.py
-```
-
-## Quick Start
-
-### 1. Command Line Usage
+### Installation
 
 ```bash
-# Single prompt
-./gemini_api.py "Explain Python in one sentence"
+# Clone the repository
+git clone https://github.com/falkensmz/GeminiProxy.git
+cd GeminiProxy
 
-# Check usage stats
-./gemini_api.py --stats
+# Install with pip
+pip install -e .
 
-# Batch processing
-echo -e "What is AI?\nExplain ML\nDefine NLP" > prompts.txt
-./gemini_api.py --batch prompts.txt --output results.json
-
-# JSON output
-./gemini_api.py "Your prompt" --json
+# Or install from PyPI (when published)
+pip install geminiproxy
 ```
 
-### 2. Python API
+### Basic Usage
+
+#### Command Line
+
+```bash
+# Send a simple prompt
+geminiproxy "Explain quantum computing in simple terms"
+
+# Check usage statistics
+geminiproxy --stats
+
+# Process multiple prompts
+geminiproxy --batch prompts.txt --output results.json
+
+# Start the REST API server
+geminiproxy --server --port 5000
+```
+
+#### Python API
 
 ```python
-from gemini_api import GeminiAPI
+from geminiproxy import GeminiClient
 
-# Initialize
-api = GeminiAPI()
+# Initialize client
+client = GeminiClient()
 
-# Simple prompt
-result = api.prompt("Write a haiku")
-if result["success"]:
-    print(result["output"])
+# Send a prompt
+response = client.prompt("Write a haiku about Python")
+if response["success"]:
+    print(response["output"])
 
 # Check usage
-stats = api.get_usage()
-print(f"Remaining: {stats['remaining_this_hour']}")
+stats = client.get_usage()
+print(f"Remaining requests: {stats['remaining_this_hour']}")
 
 # Batch processing
-prompts = ["Question 1", "Question 2", "Question 3"]
-results = api.batch_prompts(prompts)
+prompts = ["What is AI?", "Explain ML", "Define NLP"]
+results = client.batch_prompts(prompts)
 ```
 
-### 3. REST API Server
+#### REST API
 
 ```bash
-# Start server
-./gemini_server.py --host 0.0.0.0 --port 5000
+# Start the server
+geminiproxy --server
 
-# In another terminal:
-# Send prompt
+# Send a prompt
 curl -X POST http://localhost:5000/prompt \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Hello Gemini"}'
+  -d '{"prompt": "Hello, Gemini!"}'
 
 # Check usage
 curl http://localhost:5000/usage
@@ -81,15 +93,18 @@ curl http://localhost:5000/usage
 # Async request
 curl -X POST http://localhost:5000/prompt/async \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Complex task"}'
+  -d '{"prompt": "Complex analysis task"}'
 ```
 
-## API Endpoints
+## 📚 Documentation
+
+### API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Health check and usage stats |
-| `/usage` | GET | Current usage statistics |
+| `/` | GET | API documentation |
+| `/health` | GET | Health check with usage stats |
+| `/usage` | GET | Detailed usage statistics |
 | `/prompt` | POST | Send prompt (synchronous) |
 | `/prompt/async` | POST | Queue prompt (asynchronous) |
 | `/job/<id>` | GET | Check async job status |
@@ -97,94 +112,151 @@ curl -X POST http://localhost:5000/prompt/async \
 | `/stream` | POST | Stream responses (SSE) |
 | `/jobs` | GET | List all jobs |
 | `/cache/clear` | POST | Clear response cache |
+| `/stats/history` | GET | Historical usage data |
 
-## Examples
-
-Run examples:
-```bash
-# All examples
-./examples.py
-
-# Specific example
-./examples.py basic   # Basic usage
-./examples.py batch   # Batch processing
-./examples.py async   # Async with callbacks
-./examples.py rest    # REST API usage
-./examples.py rate    # Rate limit handling
-./examples.py cache   # Caching demonstration
-```
-
-## Configuration
-
-### GeminiAPI Parameters
+### Configuration
 
 ```python
-api = GeminiAPI(
-    auto_approve=True,        # Auto-approve tool calls (--yolo)
+from geminiproxy import GeminiClient
+
+client = GeminiClient(
+    auto_approve=True,        # Auto-approve tool calls
     checkpointing=True,       # Enable checkpointing
-    max_retries=3,           # Retry failed requests
-    rate_limit_per_hour=950  # Conservative limit (max 1000)
+    max_retries=3,           # Retry attempts
+    rate_limit_per_hour=950, # Conservative limit
+    cache_ttl=3600,          # Cache TTL in seconds
+    timeout=300              # Command timeout
 )
 ```
 
-### Environment Variables
+## 🐳 Docker Deployment
 
-The wrapper respects the same environment variables as the Gemini CLI tool.
+### Using Docker
 
-## Rate Limiting
+```bash
+# Build the image
+docker build -t geminiproxy .
 
-The wrapper tracks API usage in `~/.gemini_rate_limit.db` and enforces a conservative limit of 950 requests/hour (below the 1000 limit). When the limit is reached:
+# Run the container
+docker run -p 5000:5000 geminiproxy
 
-1. Synchronous calls return an error with wait time
-2. Async calls are queued automatically
-3. Batch processing pauses until the limit resets
-
-## Caching
-
-Responses are cached in memory by default. Cache keys are generated from:
-- Prompt text
-- Extra flags
-
-To bypass cache:
-```python
-result = api.prompt("Your prompt", use_cache=False)
+# With environment variables
+docker run -p 5000:5000 \
+  -e RATE_LIMIT=900 \
+  -e AUTO_APPROVE=true \
+  geminiproxy
 ```
 
-## Error Handling
+### Using Docker Compose
 
-The wrapper handles:
-- Rate limit errors (with wait time calculation)
-- Timeout errors (5-minute default)
-- Subprocess errors
-- Network errors (in REST API)
+```bash
+# Start services
+docker-compose up -d
 
-All errors include detailed messages and usage statistics.
+# View logs
+docker-compose logs -f
 
-## Performance Tips
+# Stop services
+docker-compose down
+```
 
-1. **Pre-batch prompts** when possible to optimize rate limit usage
-2. **Use caching** for repeated queries
-3. **Monitor usage** with `/usage` endpoint or `--stats` flag
-4. **Adjust concurrency** based on your needs
-5. **Use async** for non-blocking operations
+## 🏗️ Architecture
 
-## Troubleshooting
+```
+GeminiProxy/
+├── geminiproxy/
+│   ├── __init__.py       # Package initialization
+│   ├── client.py         # Core client implementation
+│   ├── server.py         # REST API server
+│   ├── database.py       # SQLite rate limiting
+│   ├── exceptions.py     # Custom exceptions
+│   └── cli.py           # CLI interface
+├── tests/               # Test suite
+├── docs/               # Documentation
+├── examples/           # Usage examples
+└── docker/            # Docker configuration
+```
 
-### Rate Limit Issues
-- Check current usage: `./gemini_api.py --stats`
-- Wait time is calculated automatically
-- Database is at `~/.gemini_rate_limit.db`
+## 🔧 Advanced Features
 
-### Server Issues
-- Check server is running: `curl http://localhost:5000/health`
-- Enable debug mode: `./gemini_server.py --debug`
-- Check Flask logs for errors
+### Rate Limiting
 
-### Gemini CLI Issues
-- Ensure `gemini` CLI is installed and in PATH
-- Test directly: `gemini --yolo -p "test"`
-- Check authentication is configured
+The system tracks API usage in a local SQLite database (`~/.geminiproxy/rate_limit.db`) and enforces a conservative limit of 950 requests/hour. When limits are reached:
 
-## License
+- Synchronous calls return error with wait time
+- Async calls are automatically queued
+- Batch processing pauses intelligently
 
-This wrapper is provided as-is for use with Google's Gemini CLI tool.
+### Caching Strategy
+
+Responses are cached with configurable TTL:
+- In-memory cache for fast retrieval
+- MD5-based cache keys
+- Automatic cache invalidation
+- Manual cache clearing available
+
+### Error Handling
+
+Comprehensive error handling with:
+- Custom exception hierarchy
+- Detailed error messages
+- Automatic retry logic
+- Graceful degradation
+
+## 📊 Monitoring & Analytics
+
+Track your usage with built-in analytics:
+
+```bash
+# View current usage
+geminiproxy --stats
+
+# Get historical data (API)
+curl http://localhost:5000/stats/history?days=30
+
+# Clean old data
+geminiproxy --cleanup
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Google for providing the Gemini CLI tool
+- The Python community for excellent libraries
+- All contributors and users of this project
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/falkensmz/GeminiProxy/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/falkensmz/GeminiProxy/discussions)
+- **Email**: contact@falkensmz.dev
+
+## 🗺️ Roadmap
+
+- [ ] WebSocket support for real-time streaming
+- [ ] Multi-user authentication system
+- [ ] Prometheus metrics integration
+- [ ] GraphQL API endpoint
+- [ ] Browser extension
+- [ ] Mobile SDK (iOS/Android)
+- [ ] Kubernetes Helm charts
+- [ ] Advanced prompt templates
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/falkensmz">falkensmz</a>
+</p>
